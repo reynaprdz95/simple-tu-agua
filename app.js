@@ -3,11 +3,11 @@ const menuToggle = document.querySelector("[data-menu-toggle]");
 const mobileNav = document.querySelector("[data-mobile-nav]");
 const header = document.querySelector("[data-header]");
 const toast = document.querySelector("[data-toast]");
-const leadForm = document.querySelector("#lead-form");
 const coverageModal = document.querySelector("[data-coverage-modal]");
 const coverageCheckForm = document.querySelector("[data-coverage-check-form]");
 const coverageWaitlistForm = document.querySelector("[data-coverage-waitlist-form]");
 const coverageResult = document.querySelector("[data-coverage-result]");
+const assistedForm = document.querySelector("[data-assisted-form]");
 let coverageDataPromise;
 let lastCoverageTrigger;
 
@@ -45,12 +45,16 @@ window.addEventListener(
 
 document.querySelector("[data-year]").textContent = new Date().getFullYear();
 
-const whatsappText = encodeURIComponent(
+const getWhatsAppHref = (message) => {
+  const whatsappText = encodeURIComponent(message);
+  return config.whatsappNumber
+    ? `https://wa.me/${String(config.whatsappNumber).replace(/\D/g, "")}?text=${whatsappText}`
+    : `https://wa.me/?text=${whatsappText}`;
+};
+
+const whatsappHref = getWhatsAppHref(
   "Hola, vi su página y me interesa saber más sobre la contratación."
 );
-const whatsappHref = config.whatsappNumber
-  ? `https://wa.me/${String(config.whatsappNumber).replace(/\D/g, "")}?text=${whatsappText}`
-  : `https://wa.me/?text=${whatsappText}`;
 
 document.querySelectorAll("[data-whatsapp-link]").forEach((link) => {
   link.href = whatsappHref;
@@ -111,6 +115,44 @@ document.querySelectorAll("[data-social]").forEach((link) => {
     event.preventDefault();
     showToast("Agrega la URL oficial de esta red en site-config.js.");
   });
+});
+
+assistedForm?.querySelector('[name="postalCode"]')?.addEventListener("input", (event) => {
+  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 5);
+});
+
+assistedForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const error = assistedForm.querySelector("[data-assisted-error]");
+  const formData = new FormData(assistedForm);
+  const lead = {
+    name: String(formData.get("name") || "").trim(),
+    phone: String(formData.get("phone") || "").trim(),
+    city: String(formData.get("city") || "").trim(),
+    postalCode: String(formData.get("postalCode") || "").trim(),
+    email: String(formData.get("email") || "").trim()
+  };
+
+  error.textContent = "";
+
+  if (!assistedForm.checkValidity() || !/^\d{5}$/.test(lead.postalCode)) {
+    error.textContent = "Completa tus datos para enviarlos por WhatsApp.";
+    assistedForm.reportValidity();
+    return;
+  }
+
+  const message = [
+    "Hola, vi su página y me interesa recibir ayuda para contratar SIMPLE.",
+    "",
+    "Mis datos:",
+    `Nombre: ${lead.name}`,
+    `Teléfono: ${lead.phone}`,
+    `Ciudad: ${lead.city}`,
+    `Código postal: ${lead.postalCode}`,
+    `Correo: ${lead.email}`
+  ].join("\n");
+
+  window.open(getWhatsAppHref(message), "_blank", "noopener,noreferrer");
 });
 
 const loadCoverageData = () => {
@@ -239,7 +281,6 @@ coverageWaitlistForm?.addEventListener("submit", async (event) => {
   const privacyInput = coverageWaitlistForm.querySelector('[name="privacy"]');
   const postalCode = coverageWaitlistForm.querySelector('[name="postalCode"]').value;
   const error = coverageWaitlistForm.querySelector("[data-waitlist-error]");
-  const submitButton = coverageWaitlistForm.querySelector('button[type="submit"]');
   const contact = contactInput.value.trim();
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
   const validPhone = contact.replace(/\D/g, "").length >= 10;
@@ -256,122 +297,15 @@ coverageWaitlistForm?.addEventListener("submit", async (event) => {
     return;
   }
 
-  submitButton.disabled = true;
-  submitButton.textContent = "Registrando...";
+  const message = [
+    "Hola, vi su página y quiero recibir aviso cuando SIMPLE llegue a mi zona.",
+    "",
+    "Mis datos:",
+    `Código postal: ${postalCode}`,
+    `Contacto: ${contact}`
+  ].join("\n");
 
-  try {
-    const response = await fetch(config.coverageEndpoint || "/api/coverage-interest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ postalCode, contact })
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.message || "No pudimos registrar tus datos.");
-
-    coverageWaitlistForm.hidden = true;
-    coverageResult.className = "coverage-result is-covered";
-    coverageResult.innerHTML = `
-      <div class="coverage-result-heading">
-        <span class="coverage-result-icon"><svg aria-hidden="true"><use href="#icon-check"></use></svg></span>
-        <div>
-          <h3>¡Listo! Registramos tus datos</h3>
-          <p>Te contactaremos cuando SIMPLE esté disponible en el código postal ${postalCode}.</p>
-        </div>
-      </div>
-    `;
-  } catch (error) {
-    error.textContent = error.message || "No pudimos registrar tus datos. Intenta nuevamente.";
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = "Avísenme cuando lleguen";
-  }
-});
-
-document.querySelectorAll(".accordion details").forEach((detail) => {
-  detail.addEventListener("toggle", () => {
-    if (!detail.open) return;
-    document.querySelectorAll(".accordion details").forEach((other) => {
-      if (other !== detail) other.open = false;
-    });
-  });
-});
-
-const validationMessages = {
-  name: "Escribe tu nombre.",
-  whatsapp: "Escribe un WhatsApp válido.",
-  email: "Escribe un correo válido.",
-  city: "Escribe tu ciudad.",
-  people: "Indica cuántas personas consumirían agua.",
-  privacy: "Necesitamos tu aceptación para enviar los datos."
-};
-
-const validateField = (field) => {
-  let valid = field.checkValidity();
-
-  if (field.name === "whatsapp") {
-    valid = field.value.replace(/\D/g, "").length >= 10;
-  }
-
-  const error = leadForm.querySelector(`[data-error-for="${field.name}"]`);
-  field.setAttribute("aria-invalid", String(!valid));
-  if (error) error.textContent = valid ? "" : validationMessages[field.name] || "Revisa este campo.";
-  return valid;
-};
-
-leadForm?.querySelectorAll("input, textarea").forEach((field) => {
-  field.addEventListener("blur", () => {
-    if (field.name !== "companyWebsite") validateField(field);
-  });
-  field.addEventListener("input", () => {
-    if (field.getAttribute("aria-invalid") === "true") validateField(field);
-  });
-});
-
-leadForm?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const requiredFields = [...leadForm.querySelectorAll("[required]")];
-  const isValid = requiredFields.every(validateField);
-  const status = leadForm.querySelector(".form-status");
-  const submitButton = leadForm.querySelector(".submit-button");
-
-  if (!isValid) {
-    status.textContent = "Revisa los campos señalados.";
-    status.className = "form-status is-error";
-    leadForm.querySelector('[aria-invalid="true"]')?.focus();
-    return;
-  }
-
-  const payload = Object.fromEntries(new FormData(leadForm).entries());
-  delete payload.privacy;
-
-  submitButton.disabled = true;
-  submitButton.classList.add("is-loading");
-  status.textContent = "Enviando tus datos...";
-  status.className = "form-status";
-
-  try {
-    const response = await fetch(config.crmEndpoint || "/api/lead", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.message || "No pudimos enviar tus datos.");
-
-    leadForm.reset();
-    leadForm.querySelector('[name="clientType"][value="hogar"]').checked = true;
-    leadForm.querySelectorAll('[aria-invalid="true"]').forEach((field) => field.removeAttribute("aria-invalid"));
-    leadForm.querySelectorAll("[data-error-for]").forEach((error) => (error.textContent = ""));
-    status.textContent = "Gracias. Recibimos tus datos y podremos dar seguimiento a tu solicitud.";
-    status.className = "form-status is-success";
-  } catch (error) {
-    status.textContent = error.message || "Ocurrió un error. Intenta nuevamente o escríbenos por WhatsApp.";
-    status.className = "form-status is-error";
-  } finally {
-    submitButton.disabled = false;
-    submitButton.classList.remove("is-loading");
-  }
+  window.open(getWhatsAppHref(message), "_blank", "noopener,noreferrer");
 });
 
 document.documentElement.dataset.appReady = "true";

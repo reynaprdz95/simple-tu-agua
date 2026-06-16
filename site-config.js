@@ -6,6 +6,6 @@ window.SIMPLE_CONFIG = {
   googlePlayUrl: "https://play.google.com/store/apps/details?id=com.simple.water&hl=es_MX&gl=MX",
   whatsappNumber: "525580802486",
   instagramUrl: "https://www.instagram.com/simpletuagua/",
-  facebookUrl: "",
+  facebookUrl: "https://www.facebook.com/SimpleTuAgua/",
   linkedinUrl: ""
 };

@@ -216,17 +216,17 @@
               </div>
             </article>
             <article class="enrollment-path enrollment-assisted">
-              <div class="enrollment-path-heading"><span class="enrollment-path-icon enrollment-path-icon-sage"><svg aria-hidden="true"><use href="#icon-headset" /></svg></span><div><h3>Recibe ayuda personalizada</h3><p>Ingresa tus datos y te ayudamos a validar tu zona, elegir la opción adecuada y completar la contratación.</p></div></div>
+            <div class="enrollment-path-heading"><span class="enrollment-path-icon enrollment-path-icon-sage"><svg aria-hidden="true"><use href="#icon-headset" /></svg></span><div><h3>Contrata con un solo click</h3><p>Ingresa tus datos para apoyarte en el proceso de contratación y enviarte un link de pago.</p></div></div>
               <form class="assisted-form" data-assisted-form novalidate>
                 <div class="assisted-form-grid">
                   <label><span>Nombre</span><input name="name" type="text" autocomplete="name" required /></label>
                   <label><span>Teléfono</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required /></label>
-                  <label><span>Ciudad</span><input name="city" type="text" autocomplete="address-level2" required /></label>
+                  <label><span>Dirección</span><input name="city" type="text" autocomplete="street-address" required /></label>
                   <label><span>Código postal</span><input name="postalCode" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required /></label>
                   <label class="assisted-form-full"><span>Correo</span><input name="email" type="email" autocomplete="email" required /></label>
                 </div>
                 <small class="assisted-form-error" data-assisted-error aria-live="polite"></small>
-                <button class="button enrollment-advisor-button" type="submit"><svg aria-hidden="true"><use href="#icon-headset" /></svg>Quiero recibir ayuda</button>
+                <button class="button enrollment-advisor-button" type="submit"><svg aria-hidden="true"><use href="#icon-headset" /></svg>Quiero contratar</button>
               </form>
             </article>
           </div>
@@ -296,6 +296,6 @@
     </div>
     <div class="toast" role="status" aria-live="polite" data-toast></div>
     <script src="site-config.js?v=20260618-3"></script>
-    <script src="app.js?v=20260618-3" type="module"></script>
+    <script src="app.js?v=20260618-4" type="module"></script>
   </body>
 </html>

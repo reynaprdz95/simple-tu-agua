@@ -194,12 +194,12 @@ assistedForm?.addEventListener("submit", (event) => {
   }
 
   const message = [
-    "Hola, vi su página y me interesa recibir ayuda para contratar SIMPLE.",
+    "Hola, vi su página y quiero contratar SIMPLE. Me interesa recibir apoyo con el proceso y el link de pago.",
     "",
     "Mis datos:",
     `Nombre: ${lead.name}`,
     `Teléfono: ${lead.phone}`,
-    `Ciudad: ${lead.city}`,
+    `Dirección: ${lead.city}`,
     `Código postal: ${lead.postalCode}`,
     `Correo: ${lead.email}`
   ].join("\n");

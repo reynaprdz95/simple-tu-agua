@@ -21,7 +21,7 @@
     <link rel="preload" href="assets/fonts/montserrat-variable.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="assets/fonts/open-sans-regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="assets/references/equipo-app-referencia.png" as="image" />
-    <link rel="stylesheet" href="styles.css?v=20260615-1" />
+    <link rel="stylesheet" href="styles.css?v=20260618-3" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -91,7 +91,17 @@
     </header>
 
     <main>
-      <section class="hero" id="inicio">
+      <section class="promo-strip" id="inicio" aria-label="Promoción de junio SIMPLE">
+        <div class="container promo-strip-inner">
+          <p><strong>Aprovecha junio con agua SIMPLE en casa.</strong> Ideal para esta temporada de calor y días de partido, con agua de calidad sin complicaciones.</p>
+          <div class="promo-strip-action">
+            <span>Código <strong>juniosimple</strong></span>
+            <a href="#como-funciona">Ver promo</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero">
         <div class="container hero-grid">
           <div class="hero-copy">
             <p class="hero-endorsement"><span aria-hidden="true"></span>Respaldado por Junghanns · 35 años</p>
@@ -125,9 +135,11 @@
             <span class="solution-badge">01 · Suscripción hogar</span>
             <h2 id="solucion-title">Una suscripción. Nosotros nos encargamos de todo.</h2>
             <div class="solution-plan">
-              <span>Plan SIMPLE hogar</span>
-              <div class="solution-price"><sup>$</sup><strong>349</strong><small>MXN<br />/ mes</small></div>
-              <small class="solution-terms">IVA incluido. Consulta cobertura y condiciones del servicio.</small>
+              <span>Promo junio · Plan SIMPLE hogar</span>
+              <div class="solution-price solution-price-promo"><sup>$</sup><strong>280</strong><small>MXN<br />/ mes</small></div>
+              <p class="solution-promo-duration">por 8 meses</p>
+              <div class="solution-promo-code">Código <strong>juniosimple</strong></div>
+              <small class="solution-terms">Promoción válida durante junio para nuevas contrataciones. IVA incluido. Consulta cobertura y condiciones del servicio.</small>
               <div class="solution-no-contract"><span><svg aria-hidden="true"><use href="#icon-form" /></svg></span>Sin contrato forzoso</div>
             </div>
           </div>
@@ -153,7 +165,28 @@
             </ul>
             <p class="company-intro">Escríbenos para enviarte una cotización adaptada a tus espacios, operación y consumo.</p>
           </div>
-          <div class="audience-media image-frame"><img src="assets/images/oficina-personas-agua.png" width="1536" height="1024" loading="lazy" alt="Personas disfrutando agua en una oficina" /></div>
+          <div class="audience-media audience-carousel image-frame" data-carousel aria-label="Ambientes SIMPLE">
+            <div class="audience-carousel-track" data-carousel-track>
+              <figure class="audience-slide is-active" data-carousel-slide>
+                <img src="assets/images/restaurante-partido-simple.jpg" width="1672" height="941" loading="lazy" alt="Restaurante durante un partido con agua servida desde un grifo instalado en lavaplatos" />
+                <figcaption>Agua disponible para tus momentos de calor y partido.</figcaption>
+              </figure>
+              <figure class="audience-slide" data-carousel-slide>
+                <img src="assets/images/oficina-personas-agua.jpg" width="1536" height="1024" loading="lazy" alt="Personas disfrutando agua en una oficina" />
+                <figcaption>Soluciones a la medida para oficinas y empresas.</figcaption>
+              </figure>
+            </div>
+            <button class="carousel-control carousel-control-prev" type="button" data-carousel-prev aria-label="Ver imagen anterior">
+              <svg aria-hidden="true"><use href="#icon-chevron" /></svg>
+            </button>
+            <button class="carousel-control carousel-control-next" type="button" data-carousel-next aria-label="Ver imagen siguiente">
+              <svg aria-hidden="true"><use href="#icon-chevron" /></svg>
+            </button>
+            <div class="carousel-dots" aria-label="Seleccionar imagen">
+              <button class="is-active" type="button" data-carousel-dot aria-label="Ver restaurante con partido" aria-current="true"></button>
+              <button type="button" data-carousel-dot aria-label="Ver oficina" aria-current="false"></button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -262,7 +295,7 @@
       </section>
     </div>
     <div class="toast" role="status" aria-live="polite" data-toast></div>
-    <script src="site-config.js?v=20260615-1"></script>
-    <script src="app.js?v=20260615-1" type="module"></script>
+    <script src="site-config.js?v=20260618-3"></script>
+    <script src="app.js?v=20260618-3" type="module"></script>
   </body>
 </html>

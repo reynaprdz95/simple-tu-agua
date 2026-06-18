@@ -117,6 +117,58 @@ document.querySelectorAll("[data-social]").forEach((link) => {
   });
 });
 
+document.querySelectorAll("[data-carousel]").forEach((carousel) => {
+  const track = carousel.querySelector("[data-carousel-track]");
+  const slides = Array.from(carousel.querySelectorAll("[data-carousel-slide]"));
+  const dots = Array.from(carousel.querySelectorAll("[data-carousel-dot]"));
+  const previousButton = carousel.querySelector("[data-carousel-prev]");
+  const nextButton = carousel.querySelector("[data-carousel-next]");
+  let currentIndex = 0;
+  let touchStartX = 0;
+
+  const showSlide = (index) => {
+    if (!track || !slides.length) return;
+    currentIndex = (index + slides.length) % slides.length;
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+    slides.forEach((slide, slideIndex) => {
+      slide.classList.toggle("is-active", slideIndex === currentIndex);
+    });
+    dots.forEach((dot, dotIndex) => {
+      const active = dotIndex === currentIndex;
+      dot.classList.toggle("is-active", active);
+      dot.setAttribute("aria-current", String(active));
+    });
+  };
+
+  previousButton?.addEventListener("click", () => showSlide(currentIndex - 1));
+  nextButton?.addEventListener("click", () => showSlide(currentIndex + 1));
+
+  dots.forEach((dot, dotIndex) => {
+    dot.addEventListener("click", () => showSlide(dotIndex));
+  });
+
+  carousel.addEventListener(
+    "touchstart",
+    (event) => {
+      touchStartX = event.touches[0]?.clientX || 0;
+    },
+    { passive: true }
+  );
+
+  carousel.addEventListener(
+    "touchend",
+    (event) => {
+      const touchEndX = event.changedTouches[0]?.clientX || 0;
+      const deltaX = touchEndX - touchStartX;
+      if (Math.abs(deltaX) < 45) return;
+      showSlide(currentIndex + (deltaX < 0 ? 1 : -1));
+    },
+    { passive: true }
+  );
+
+  showSlide(0);
+});
+
 assistedForm?.querySelector('[name="postalCode"]')?.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 5);
 });

@@ -7,5 +7,7 @@ window.SIMPLE_CONFIG = {
   whatsappNumber: "525580802486",
   instagramUrl: "https://www.instagram.com/simpletuagua/",
   facebookUrl: "https://www.facebook.com/SimpleTuAgua/",
-  linkedinUrl: ""
+  linkedinUrl: "",
+  stripePaymentLink: "",
+  promoCode: "AGUASIMPLE"
 };

@@ -43,7 +43,9 @@ window.addEventListener(
   { passive: true }
 );
 
-document.querySelector("[data-year]").textContent = new Date().getFullYear();
+document.querySelectorAll("[data-year]").forEach((node) => {
+  node.textContent = new Date().getFullYear();
+});
 
 const getWhatsAppHref = (message) => {
   const whatsappText = encodeURIComponent(message);
@@ -123,8 +125,11 @@ document.querySelectorAll("[data-carousel]").forEach((carousel) => {
   const dots = Array.from(carousel.querySelectorAll("[data-carousel-dot]"));
   const previousButton = carousel.querySelector("[data-carousel-prev]");
   const nextButton = carousel.querySelector("[data-carousel-next]");
+  const autoplayDelay = Number(carousel.dataset.carouselAutoplay || 0);
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let currentIndex = 0;
   let touchStartX = 0;
+  let autoplayTimer;
 
   const showSlide = (index) => {
     if (!track || !slides.length) return;
@@ -140,17 +145,48 @@ document.querySelectorAll("[data-carousel]").forEach((carousel) => {
     });
   };
 
-  previousButton?.addEventListener("click", () => showSlide(currentIndex - 1));
-  nextButton?.addEventListener("click", () => showSlide(currentIndex + 1));
+  const stopAutoplay = () => {
+    if (!autoplayTimer) return;
+    window.clearInterval(autoplayTimer);
+    autoplayTimer = undefined;
+  };
+
+  const startAutoplay = () => {
+    if (!autoplayDelay || slides.length < 2 || prefersReducedMotion || autoplayTimer) return;
+    autoplayTimer = window.setInterval(() => showSlide(currentIndex + 1), autoplayDelay);
+  };
+
+  const goToSlide = (index) => {
+    showSlide(index);
+    stopAutoplay();
+    startAutoplay();
+  };
+
+  previousButton?.addEventListener("click", () => goToSlide(currentIndex - 1));
+  nextButton?.addEventListener("click", () => goToSlide(currentIndex + 1));
 
   dots.forEach((dot, dotIndex) => {
-    dot.addEventListener("click", () => showSlide(dotIndex));
+    dot.addEventListener("click", () => goToSlide(dotIndex));
+  });
+
+  carousel.addEventListener("mouseenter", stopAutoplay);
+  carousel.addEventListener("mouseleave", startAutoplay);
+  carousel.addEventListener("focusin", stopAutoplay);
+  carousel.addEventListener("focusout", startAutoplay);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopAutoplay();
+      return;
+    }
+    startAutoplay();
   });
 
   carousel.addEventListener(
     "touchstart",
     (event) => {
       touchStartX = event.touches[0]?.clientX || 0;
+      stopAutoplay();
     },
     { passive: true }
   );
@@ -160,22 +196,24 @@ document.querySelectorAll("[data-carousel]").forEach((carousel) => {
     (event) => {
       const touchEndX = event.changedTouches[0]?.clientX || 0;
       const deltaX = touchEndX - touchStartX;
-      if (Math.abs(deltaX) < 45) return;
-      showSlide(currentIndex + (deltaX < 0 ? 1 : -1));
+      if (Math.abs(deltaX) >= 45) showSlide(currentIndex + (deltaX < 0 ? 1 : -1));
+      startAutoplay();
     },
     { passive: true }
   );
 
   showSlide(0);
+  startAutoplay();
 });
 
 assistedForm?.querySelector('[name="postalCode"]')?.addEventListener("input", (event) => {
   event.target.value = event.target.value.replace(/\D/g, "").slice(0, 5);
 });
 
-assistedForm?.addEventListener("submit", (event) => {
+assistedForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const error = assistedForm.querySelector("[data-assisted-error]");
+  const message = assistedForm.querySelector("[data-assisted-error]");
+  const submitButton = assistedForm.querySelector('button[type="submit"]');
   const formData = new FormData(assistedForm);
   const lead = {
     name: String(formData.get("name") || "").trim(),
@@ -185,26 +223,72 @@ assistedForm?.addEventListener("submit", (event) => {
     email: String(formData.get("email") || "").trim()
   };
 
-  error.textContent = "";
+  message.textContent = "";
+  message.classList.remove("is-success", "is-waitlist");
 
   if (!assistedForm.checkValidity() || !/^\d{5}$/.test(lead.postalCode)) {
-    error.textContent = "Completa tus datos para enviarlos por WhatsApp.";
+    message.textContent = "Completa tus datos y un código postal de cinco dígitos.";
     assistedForm.reportValidity();
     return;
   }
 
-  const message = [
-    "Hola, vi su página y quiero contratar SIMPLE. Me interesa recibir apoyo con el proceso y el link de pago.",
-    "",
-    "Mis datos:",
-    `Nombre: ${lead.name}`,
-    `Teléfono: ${lead.phone}`,
-    `Dirección: ${lead.city}`,
-    `Código postal: ${lead.postalCode}`,
-    `Correo: ${lead.email}`
-  ].join("\n");
+  submitButton.disabled = true;
+  const originalButtonText = submitButton.textContent;
+  submitButton.lastChild.textContent = "Validando cobertura...";
 
-  window.open(getWhatsAppHref(message), "_blank", "noopener,noreferrer");
+  try {
+    const coverageData = await loadCoverageData();
+    const coverageZone = coverageData.postalCodes[lead.postalCode];
+
+    if (!coverageZone) {
+      const contact = lead.email || lead.phone;
+      const response = await fetch(config.coverageEndpoint || "/api/coverage-interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postalCode: lead.postalCode,
+          contact,
+          name: lead.name,
+          phone: lead.phone,
+          email: lead.email,
+          address: lead.city,
+          source: "assisted-contract-form"
+        })
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.message || "No pudimos registrar tus datos. Intenta nuevamente o escríbenos por WhatsApp.");
+      }
+
+      message.classList.add("is-waitlist");
+      message.textContent = "Gracias. Aún no tenemos cobertura en tu código postal; registramos tus datos y te avisaremos cuando SIMPLE llegue a tu zona.";
+      showToast("Te avisaremos cuando tengamos cobertura en tu zona.");
+      return;
+    }
+
+    message.classList.add("is-success");
+    message.textContent = `Tenemos cobertura en ${coverageZone}. Te llevamos a contratación.`;
+
+    const params = new URLSearchParams({
+      name: lead.name,
+      phone: lead.phone,
+      address: lead.city,
+      cp: lead.postalCode,
+      email: lead.email
+    });
+
+    window.setTimeout(() => {
+      window.location.href = `contratacion.html?${params.toString()}`;
+    }, 650);
+  } catch (coverageError) {
+    message.textContent = coverageError.message || "No pudimos validar cobertura. Intenta nuevamente.";
+  } finally {
+    window.setTimeout(() => {
+      submitButton.disabled = false;
+      submitButton.lastChild.textContent = originalButtonText.trim();
+    }, 700);
+  }
 });
 
 const loadCoverageData = () => {
@@ -245,7 +329,8 @@ const resetCoverageModal = () => {
 };
 
 document.querySelectorAll("[data-coverage-open]").forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
     lastCoverageTrigger = button;
     resetCoverageModal();
     coverageModal.hidden = false;
@@ -296,12 +381,13 @@ coverageCheckForm?.addEventListener("submit", async (event) => {
           <span class="coverage-result-icon"><svg aria-hidden="true"><use href="#icon-check"></use></svg></span>
           <div>
             <h3>¡Tu zona está lista para recibir SIMPLE!</h3>
-            <p>Tenemos cobertura en ${borough}. Puedes continuar con la contratación desde la app.</p>
+            <p>Tenemos cobertura en ${borough}. Puedes continuar con tus datos de contratación y pago.</p>
           </div>
         </div>
-        <div class="coverage-result-actions">
-          <a class="button button-primary" href="${config.appStoreUrl}" target="_blank" rel="noopener noreferrer">Descargar en App Store</a>
-          <a class="button button-primary" href="${config.googlePlayUrl}" target="_blank" rel="noopener noreferrer">Descargar en Google Play</a>
+        <div class="coverage-result-actions coverage-result-actions-three">
+          <a class="button button-primary" href="contratacion.html?cp=${encodeURIComponent(postalCode)}">Continuar contratación</a>
+          <a class="button button-secondary" href="${config.appStoreUrl}" target="_blank" rel="noopener noreferrer">App Store</a>
+          <a class="button button-secondary" href="${config.googlePlayUrl}" target="_blank" rel="noopener noreferrer">Google Play</a>
         </div>
       `;
       return;
@@ -361,3 +447,90 @@ coverageWaitlistForm?.addEventListener("submit", async (event) => {
 });
 
 document.documentElement.dataset.appReady = "true";
+
+
+const checkoutForm = document.querySelector("[data-checkout-form]");
+
+const appendQuery = (url, params) => {
+  const target = new URL(url, window.location.href);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) target.searchParams.set(key, value);
+  });
+  return target.toString();
+};
+
+const buildCheckoutWhatsAppMessage = (lead) => [
+  `Hola, vi su página y quiero contratar SIMPLE con el código ${config.promoCode || "AGUASIMPLE"}. Me interesa recibir apoyo con el proceso y el link de pago.`,
+  "",
+  "Mis datos:",
+  `Nombre: ${lead.firstName} ${lead.lastName} ${lead.secondLastName}`.trim(),
+  `Celular: ${lead.phone}`,
+  `Correo: ${lead.email}`,
+  `Fecha de nacimiento: ${lead.birthDate || "No indicada"}`,
+  `Dirección: ${lead.streetType} ${lead.street} ${lead.externalNumber}${lead.internalNumber ? " Int. " + lead.internalNumber : ""}`,
+  `Colonia: ${lead.neighborhood}`,
+  `Código postal: ${lead.postalCode}`,
+  `Municipio/Alcaldía: ${lead.municipality}`,
+  `Estado: ${lead.state}`,
+  `Referencia: ${lead.reference || "No indicada"}`,
+  `Cómo se enteró: ${lead.source}`
+].join("\n");
+
+checkoutForm?.querySelector('[name="postalCode"]')?.addEventListener("input", (event) => {
+  event.target.value = event.target.value.replace(/\D/g, "").slice(0, 5);
+});
+
+if (checkoutForm) {
+  const params = new URLSearchParams(window.location.search);
+  const prefillMap = {
+    firstName: params.get("name") || "",
+    phone: params.get("phone") || "",
+    email: params.get("email") || "",
+    postalCode: params.get("cp") || params.get("postalCode") || "",
+    street: params.get("address") || ""
+  };
+
+  Object.entries(prefillMap).forEach(([name, value]) => {
+    const field = checkoutForm.querySelector(`[name="${name}"]`);
+    if (field && value) field.value = value;
+  });
+
+  checkoutForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const error = checkoutForm.querySelector("[data-checkout-error]");
+    const formData = new FormData(checkoutForm);
+    const lead = Object.fromEntries(Array.from(formData.entries()).map(([key, value]) => [key, String(value).trim()]));
+    error.textContent = "";
+
+    if (!checkoutForm.checkValidity() || !/^\d{5}$/.test(lead.postalCode || "")) {
+      error.textContent = "Completa los campos requeridos para continuar.";
+      checkoutForm.reportValidity();
+      return;
+    }
+
+    try {
+      const coverageData = await loadCoverageData();
+      if (!coverageData.postalCodes[lead.postalCode]) {
+        error.textContent = "Este código postal aún no aparece en cobertura. Escríbenos por WhatsApp para revisarlo contigo.";
+        return;
+      }
+    } catch (coverageError) {
+      error.textContent = "No pudimos validar cobertura en este momento. Intenta nuevamente o escríbenos por WhatsApp.";
+      return;
+    }
+
+    const message = buildCheckoutWhatsAppMessage(lead);
+    window.localStorage?.setItem("simpleCheckoutLead", JSON.stringify({ ...lead, promoCode: config.promoCode || "AGUASIMPLE", createdAt: new Date().toISOString() }));
+
+    if (config.stripePaymentLink) {
+      const paymentUrl = appendQuery(config.stripePaymentLink, {
+        prefilled_email: lead.email,
+        client_reference_id: `${lead.postalCode}-${Date.now()}`
+      });
+      window.location.href = paymentUrl;
+      return;
+    }
+
+    window.open(getWhatsAppHref(message), "_blank", "noopener,noreferrer");
+  });
+}

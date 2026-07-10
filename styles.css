@@ -4389,10 +4389,17 @@ h2 {
   right: clamp(14px, 3vw, 26px);
   bottom: clamp(42px, 5vw, 58px);
   left: clamp(14px, 3vw, 26px);
+  width: auto;
+  max-width: none;
+  border: 0;
+  padding: 0;
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .hero-slide-benefits span {
